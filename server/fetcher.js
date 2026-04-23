@@ -27,9 +27,14 @@ async function syncProtocol(slug) {
     const dataByDate = {};
     
     // Process TVL (Unix timestamp vs Date)
+    // The TVL API returns a real-time entry at the end with a non-midnight timestamp,
+    // while fees/revenue APIs only have midnight (00:00 UTC) timestamps.
+    // Normalize all TVL timestamps to midnight UTC so they align with fees/revenue data.
     if (tvlData.status === 'fulfilled' && tvlData.value && tvlData.value.tvl) {
       tvlData.value.tvl.forEach(item => {
-        dataByDate[item.date] = { tvl: item.totalLiquidityUSD };
+        const normalizedDate = Math.floor(item.date / 86400) * 86400;
+        // Use the latest TVL value for each day (real-time entry overwrites midnight entry)
+        dataByDate[normalizedDate] = { tvl: item.totalLiquidityUSD };
       });
     }
     
