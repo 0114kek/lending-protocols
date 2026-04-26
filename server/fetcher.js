@@ -63,13 +63,18 @@ async function syncProtocol(slug) {
       for (const item of items) insertStmt.run(item);
     });
 
-    const items = Object.entries(dataByDate).map(([date, vals]) => ({
-      protocol: slug,
-      date: parseInt(date),
-      tvl: vals.tvl || null,
-      fees: vals.fees || null,
-      revenue: vals.revenue || null
-    }));
+    const latestRecord = db.prepare('SELECT MAX(date) as maxDate FROM metrics WHERE protocol = ?').get(slug);
+    const cutoffDate = latestRecord && latestRecord.maxDate ? latestRecord.maxDate - (7 * 86400) : 0;
+
+    const items = Object.entries(dataByDate)
+      .map(([date, vals]) => ({
+        protocol: slug,
+        date: parseInt(date),
+        tvl: vals.tvl || null,
+        fees: vals.fees || null,
+        revenue: vals.revenue || null
+      }))
+      .filter(item => item.date >= cutoffDate);
 
     if (items.length > 0) {
       insertMany(items);
